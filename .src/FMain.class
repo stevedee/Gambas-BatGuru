@@ -1,0 +1,361 @@
+' Gambas class file
+
+Public arrBatIdData[25, 17] As String     '[Bat type, bat data fields]
+Public arrShortlist[25] As String
+Public arrScores[25] As Integer
+Public intNumberOfBatTypes As Integer     'bat types in CSV data file
+Public intBatList As Integer              'bat types in shortlist
+
+Const BAT_TYPE As Integer = 0
+Const CALL_TYPE As Integer = 1
+Const FMAXE As Integer = 2
+Const FMAXE_LO As Integer = 3
+Const FMAXE_HI As Integer = 4
+Const F_START As Integer = 5
+Const F_START_LO As Integer = 6
+Const F_START_HI As Integer = 7
+Const F_END As Integer = 8
+Const F_END_LO As Integer = 9
+Const F_END_HI As Integer = 10
+Const DUR As Integer = 11
+Const DUR_LO As Integer = 12
+Const DUR_HI As Integer = 13
+Const INT As Integer = 14
+Const INTERVAL_LO As Integer = 15
+Const INTERVAL_HI As Integer = 16
+
+
+Public Sub Form_Open()
+Dim hFile As Stream
+Dim strBatDataFile As String
+Dim strOneLine As String
+Dim index As Integer
+Dim intLine As Integer
+' Dim arrBatIdData As New String[11, 20]
+  
+  strBatDataFile = Application.Path & "/BatData.csv"
+  If Exist(strBatDataFile) Then
+    hFile = Open strBatDataFile For Input
+    While Not Eof(hFile)
+      Line Input #hFile, strOneLine
+      For index = 0 To 16     'data fields
+        If InStr(strOneLine, ",") > 0 Then
+          arrBatIdData[intLine, index] = Mid(strOneLine, 1, InStr(strOneLine, ",") - 1) 
+          strOneLine = Mid(strOneLine, InStr(strOneLine, ",") + 1)
+        Else
+          arrBatIdData[intLine, index] = strOneLine     'Mid(strOneLine, 1, InStr(strOneLine, gb.Lf))
+        Endif
+        If arrBatIdData[intLine, index] = "" Then
+          arrBatIdData[intLine, index] = "0"    'use "0" rather than nothing
+        Endif
+      Next
+      Inc intLine
+    Wend
+  Else
+    Me.Caption = "Can't find bat data file"
+  Endif
+  Close #hFile
+  intNumberOfBatTypes = intLine - 1     '-1 for last Inc intLine
+  lstCallType.Index = 1
+  lstCallType.SetFocus()
+
+  ' arrBatIdData.Resize(index, intLine)
+  ' Me.Text = arrBatIdData.Count
+Catch
+  Me.Text = Error.Text
+End
+
+Public Sub btnGuess_Click()
+Dim intBatType As Integer
+Dim strCallType1 As String
+Dim strCallType2 As String
+Dim intData As Integer
+Dim index As Integer
+Dim indexZ As Integer
+Dim intTop As Integer
+Dim fLowerLimit As Float
+Dim fUpperLimit As Float
+
+'plan B; test bat against each of the 5 sets of limits, then rate the fit based on a points system.
+'Could have 1 point/param, but some params may be more important, e.g. FmaxE & duration. so maybe 2 points for
+'FmaxE, 2 for Dur, 1 for interval, 1 for Fstart & 1 for Fend
+
+  For index = 0 To 24
+    arrScores[index] = 0
+  Next
+
+  taShortlist.Clear
+  intBatList = 0
+  'check FmaxE
+  If vbFmaxE.Value > 0 Then
+    For intBatType = 1 To intNumberOfBatTypes      '0 = headers so ignore
+      If InStr(arrBatIdData[intBatType, CALL_TYPE], "/") > 0 Then     'bat echo call could be qCF or FM-qCF
+        strCallType1 = "qcf"
+        strCallType2 = "fm-qcf"
+      Else
+        strCallType1 = ""
+        strCallType2 = ""
+      Endif
+      If arrBatIdData[intBatType, CALL_TYPE] = LCase(lstCallType.Text) Or strCallType1 = LCase(lstCallType.Text) Or strCallType2 = LCase(lstCallType.Text) Then  
+        If vbFmaxE.Value > CFloat(arrBatIdData[intBatType, FMAXE_LO]) And vbFmaxE.Value < CFloat(arrBatIdData[intBatType, FMAXE_HI]) Then
+          arrScores[intBatType] += 1
+          fLowerLimit = CalcPercentLimit(CFloat(arrBatIdData[intBatType, FMAXE]), 0.68, CFloat(arrBatIdData[intBatType, FMAXE_LO]), CFloat(arrBatIdData[intBatType, FMAXE_HI]), False)
+          fUpperLimit = CalcPercentLimit(CFloat(arrBatIdData[intBatType, FMAXE]), 0.68, CFloat(arrBatIdData[intBatType, FMAXE_LO]), CFloat(arrBatIdData[intBatType, FMAXE_HI]), True)
+          If vbFmaxE.Value > fLowerLimit And vbFmaxE.Value < fupperLimit Then
+            arrScores[intBatType] += 1    'an extra point as its within +/- 68%
+          Endif
+          fLowerLimit = CalcPercentLimit(CFloat(arrBatIdData[intBatType, FMAXE]), 0.2, CFloat(arrBatIdData[intBatType, FMAXE_LO]), CFloat(arrBatIdData[intBatType, FMAXE_HI]), False)
+          fUpperLimit = CalcPercentLimit(CFloat(arrBatIdData[intBatType, FMAXE]), 0.2, CFloat(arrBatIdData[intBatType, FMAXE_LO]), CFloat(arrBatIdData[intBatType, FMAXE_HI]), True)
+          If vbFmaxE.Value > fLowerLimit And vbFmaxE.Value < fupperLimit Then
+            arrScores[intBatType] += 1    'an extra point as its within +/- 30%
+          Endif          
+          Inc intBatList
+        Endif
+      Endif
+    Next
+  Endif
+  
+    'check F_START
+  If vbFstart.Value > 0 Then
+    For intBatType = 1 To intNumberOfBatTypes      '0 = headers so ignore
+      If InStr(arrBatIdData[intBatType, CALL_TYPE], "/") > 0 Then     'bat echo call could be qCF or FM-qCF
+        strCallType1 = "qcf"
+        strCallType2 = "fm-qcf"
+      Else
+        strCallType1 = ""
+        strCallType2 = ""        
+      Endif
+      If arrBatIdData[intBatType, CALL_TYPE] = LCase(lstCallType.Text) Or strCallType1 = LCase(lstCallType.Text) Or strCallType2 = LCase(lstCallType.Text) Then
+        If vbFstart.Value > CFloat(arrBatIdData[intBatType, F_START_LO]) And vbFstart.Value < CFloat(arrBatIdData[intBatType, F_START_HI]) Then
+          arrScores[intBatType] += 1
+          '***NOTE: system freq response for high freq is not great, so not adding a bonus point for Fstart***
+      '   fLowerLimit = Calc70pcValue(CFloat(arrBatIdData[intBatType, F_START_LO]), CFloat(arrBatIdData[intBatType, F_START_HI]), False)
+      '   fUpperLimit = Calc70pcValue(CFloat(arrBatIdData[intBatType, F_START_LO]), CFloat(arrBatIdData[intBatType, F_START_HI]), True)
+      '   If vbFstart.Value > fLowerLimit And vbFstart.Value < fupperLimit Then
+      '     arrScores[intBatType] += 1    'an extra point as its within +/- 70%
+      '   Endif
+          Inc intBatList
+        Endif
+      Endif
+    Next
+  Endif
+  
+    'check F_END
+  If vbFend.Value > 0 Then
+    For intBatType = 1 To intNumberOfBatTypes      '0 = headers so ignore
+      If InStr(arrBatIdData[intBatType, CALL_TYPE], "/") > 0 Then     'bat echo call could be qCF or FM-qCF
+        strCallType1 = "qcf"
+        strCallType2 = "fm-qcf"
+      Else
+        strCallType1 = ""
+        strCallType2 = ""        
+      Endif
+      If arrBatIdData[intBatType, CALL_TYPE] = LCase(lstCallType.Text) Or strCallType1 = LCase(lstCallType.Text) Or strCallType2 = LCase(lstCallType.Text) Then
+        If vbFend.Value > CFloat(arrBatIdData[intBatType, F_END_LO]) And vbFend.Value < CFloat(arrBatIdData[intBatType, F_END_HI]) Then
+          arrScores[intBatType] += 1
+          fLowerLimit = CalcPercentLimit(CFloat(arrBatIdData[intBatType, F_END]), 0.68, CFloat(arrBatIdData[intBatType, F_END_LO]), CFloat(arrBatIdData[intBatType, F_END_HI]), False)
+          fUpperLimit = CalcPercentLimit(CFloat(arrBatIdData[intBatType, F_END]), 0.68, CFloat(arrBatIdData[intBatType, F_END_LO]), CFloat(arrBatIdData[intBatType, F_END_HI]), True)
+          If vbFend.Value > fLowerLimit And vbFend.Value < fupperLimit Then
+            arrScores[intBatType] += 1    'an extra point as its within +/- 68%
+          Endif
+          fLowerLimit = CalcPercentLimit(CFloat(arrBatIdData[intBatType, F_END]), 0.2, CFloat(arrBatIdData[intBatType, F_END_LO]), CFloat(arrBatIdData[intBatType, F_END_HI]), False)
+          fUpperLimit = CalcPercentLimit(CFloat(arrBatIdData[intBatType, F_END]), 0.2, CFloat(arrBatIdData[intBatType, F_END_LO]), CFloat(arrBatIdData[intBatType, F_END_HI]), True)
+          If vbFend.Value > fLowerLimit And vbFend.Value < fupperLimit Then
+            arrScores[intBatType] += 1    'an extra point as its within +/- 30%
+          Endif          
+          Inc intBatList
+        Endif
+      Endif
+    Next
+  Endif
+  
+  'check Duration
+  If vbDuration.Value > 0 Then
+    For intBatType = 1 To intNumberOfBatTypes      '0 = headers so ignore
+      If InStr(arrBatIdData[intBatType, CALL_TYPE], "/") > 0 Then     'bat echo call could be qCF or FM-qCF
+        strCallType1 = "qcf"
+        strCallType2 = "fm-qcf"
+      Else
+        strCallType1 = ""
+        strCallType2 = ""
+      Endif
+      If arrBatIdData[intBatType, CALL_TYPE] = LCase(lstCallType.Text) Or strCallType1 = LCase(lstCallType.Text) Or strCallType2 = LCase(lstCallType.Text) Then
+        If vbDuration.Value > CFloat(arrBatIdData[intBatType, DUR_LO]) And vbDuration.Value < CFloat(arrBatIdData[intBatType, DUR_HI]) Then
+          arrScores[intBatType] += 1
+          fLowerLimit = CalcPercentLimit(CFloat(arrBatIdData[intBatType, DUR]), 0.68, CFloat(arrBatIdData[intBatType, DUR_LO]), CFloat(arrBatIdData[intBatType, DUR_HI]), False)
+          fUpperLimit = CalcPercentLimit(CFloat(arrBatIdData[intBatType, DUR]), 0.68, CFloat(arrBatIdData[intBatType, DUR_LO]), CFloat(arrBatIdData[intBatType, DUR_HI]), True)
+          If vbDuration.Value > fLowerLimit And vbDuration.Value < fupperLimit Then
+            arrScores[intBatType] += 1    'an extra point as its within +/- 68%
+          Endif
+          fLowerLimit = CalcPercentLimit(CFloat(arrBatIdData[intBatType, DUR]), 0.2, CFloat(arrBatIdData[intBatType, DUR_LO]), CFloat(arrBatIdData[intBatType, DUR_HI]), False)
+          fUpperLimit = CalcPercentLimit(CFloat(arrBatIdData[intBatType, DUR]), 0.2, CFloat(arrBatIdData[intBatType, DUR_LO]), CFloat(arrBatIdData[intBatType, DUR_HI]), True)
+          If vbDuration.Value > fLowerLimit And vbDuration.Value < fupperLimit Then
+            arrScores[intBatType] += 1    'an extra point as its within +/- 30%
+          Endif          
+          Inc intBatList
+        Endif
+      Endif
+    Next
+  Endif
+  
+  'check Interval
+  If vbInterval.Value > 0 Then
+    For intBatType = 1 To intNumberOfBatTypes      '0 = headers so ignore
+      If InStr(arrBatIdData[intBatType, CALL_TYPE], "/") > 0 Then     'bat echo call could be qCF or FM-qCF
+        strCallType1 = "qcf"
+        strCallType2 = "fm-qcf"
+      Else
+        strCallType1 = ""
+        strCallType2 = ""        
+      Endif
+      If arrBatIdData[intBatType, CALL_TYPE] = LCase(lstCallType.Text) Or strCallType1 = LCase(lstCallType.Text) Or strCallType2 = LCase(lstCallType.Text) Then
+        If vbInterval.Value > CFloat(arrBatIdData[intBatType, INTERVAL_LO]) And vbInterval.Value < CFloat(arrBatIdData[intBatType, INTERVAL_HI]) Then
+          arrScores[intBatType] += 1
+          fLowerLimit = CalcPercentLimit(CFloat(arrBatIdData[intBatType, INT]), 0.68, CFloat(arrBatIdData[intBatType, INTERVAL_LO]), CFloat(arrBatIdData[intBatType, INTERVAL_HI]), False)
+          fUpperLimit = CalcPercentLimit(CFloat(arrBatIdData[intBatType, INT]), 0.68, CFloat(arrBatIdData[intBatType, INTERVAL_LO]), CFloat(arrBatIdData[intBatType, INTERVAL_HI]), True)
+          If vbInterval.Value > fLowerLimit And vbInterval.Value < fupperLimit Then
+            arrScores[intBatType] += 1    'an extra point as its within +/- 70%
+          Endif
+          fLowerLimit = CalcPercentLimit(CFloat(arrBatIdData[intBatType, INT]), 0.2, CFloat(arrBatIdData[intBatType, INTERVAL_LO]), CFloat(arrBatIdData[intBatType, INTERVAL_HI]), False)
+          fUpperLimit = CalcPercentLimit(CFloat(arrBatIdData[intBatType, INT]), 0.2, CFloat(arrBatIdData[intBatType, INTERVAL_LO]), CFloat(arrBatIdData[intBatType, INTERVAL_HI]), True)
+          If vbInterval.Value > fLowerLimit And vbInterval.Value < fupperLimit Then
+            arrScores[intBatType] += 1    'an extra point as its within +/- 30%
+          Endif          
+          Inc intBatList
+        Endif
+      Endif
+    Next
+  Endif  
+  
+  For indexZ = 1 To 3    'list the top 3 guesses
+    intTop = 1
+    For index = 1 To 24   'arrScores.Count - 2
+      If arrScores[index] > arrScores[intTop] Then
+        intTop = index
+      Endif
+    Next
+    If arrScores[intTop] > 0 Then
+      taShortlist.Text &= arrBatIdData[intTop, 0] & " (score: " & arrScores[intTop] & ")" & gb.Lf
+    Endif
+    arrScores[intTop] = 0
+  Next
+  ' Test
+End
+
+Public Function CalcPercentLimit(fTarget As Float, fPercent As Float, fLower As Float, fUpper As Float, blnHigh As Boolean) As Float
+Dim fvalue As Float
+Dim fMid As Float
+
+  If fTarget > 0 And fLower > 0 And fUpper > 0 Then
+    ' fValue = 0.5 * (fUpper - fLower)  'half the range
+    ' fMid = fLower + fValue            'the middle value within the range
+    fValue = fTarget * fPercent            ' 68% is roughly the 2 sigma range
+    If blnHigh Then
+      fValue = fTarget + fValue          'the upper limit for 2 sigma
+    Else
+      fValue = fTarget - fValue          'the lower limit for 2 sigma
+    Endif
+    Return Round(fValue, -1)
+  Else
+    Return 0
+  Endif
+  
+End
+
+
+Public Sub Test()
+Dim index As Integer
+  
+  taShortlist.Clear
+  For index = 0 To intBatList
+    taShortlist.Text = taShortlist.Text & arrShortlist[index] & gb.Lf
+  Next
+  
+End
+
+
+Public Sub lstCallType_Select()
+  
+  taPossibles.Clear
+  SelectCallTypeImage
+  GetPossibleBats
+  
+End
+
+
+
+Public Sub SelectCallTypeImage()
+Dim pCall As Picture
+
+  Select Case lstCallType.Text
+    Case "FM"
+      pcall = Picture.Load(Application.Path & "/fm.png")
+      
+    Case "FM-qCF"
+      pcall = Picture.Load(Application.Path & "/fm_qcf.png")
+      
+    Case "FM-CF-FM"
+      pcall = Picture.Load(Application.Path & "/fm_cf_fm.png")
+          
+    Case "qCF"
+      pcall = Picture.Load(Application.Path & "/qcf.png")
+      
+    Case "qCF-FM"
+      pcall = Picture.Load(Application.Path & "/qcf_fm.png")
+      
+    Case Else
+      Me.Test = "Error: no call type"
+  End Select
+  pbCallType.Picture = pCall
+  
+
+End
+
+Public Sub GetPossibleBats()
+Dim intBatType As Integer
+Dim strCallType1 As String
+Dim strCallType2 As String
+Dim intFmaxE As Integer
+  
+  taPossibles.Text = "Bats with this call type;" & gb.Lf
+  For intBatType = 1 To intNumberOfBatTypes      '0 = headers so ignore
+    If InStr(arrBatIdData[intBatType, CALL_TYPE], "/") > 0 Then     'bat echo call could be qCF or FM-qCF
+      strCallType1 = "qcf"
+      strCallType2 = "fm-qcf"
+    Else
+      strCallType1 = ""
+      strCallType2 = ""
+    Endif
+    If arrBatIdData[intBatType, CALL_TYPE] = LCase(lstCallType.Text) Or strCallType1 = LCase(lstCallType.Text) Or strCallType2 = LCase(lstCallType.Text) Then
+      taPossibles.Text &= gb.Lf & " - " & arrBatIdData[intBatType, BAT_TYPE]
+    Endif
+  Next
+  
+End
+
+
+Public Sub mnuAbout_Click()
+Dim strAbout As String
+
+  strAbout = Application.Name & " - " & Application.Version & gb.Lf & gb.Lf
+  strAbout &= "A program by Steve Davis " & gb.Lf & gb.Lf
+  strAbout &= "This program uses bat echolocation call data by Chris Russ" & gb.Lf
+  strAbout &= "as described in his excellent book: British Bat Calls" & gb.Lf & gb.Lf
+  strAbout &= "This book is an essential reference book for anyone" & gb.Lf
+  strAbout &= "interested in bat call analysis." & gb.Lf & gb.Lf
+  strAbout &= "BatGuru only attempts to identify a bat after you have" & gb.Lf
+  strAbout &= "manually entered the 6 key parameters taken from a" & gb.Lf
+  strAbout &= "full-spectrum bat call recording." & gb.Lf & gb.Lf
+  strAbout &= "Open your recordings in Audacity, then use" & gb.Lf
+  strAbout &= "the Spectrogram & Frequency Analysis displays to" & gb.Lf
+  strAbout &= "determine the key parameters, which are:-" & gb.Lf & gb.Lf
+  strAbout &= "  - call type" & gb.Lf
+  strAbout &= "  - FmaxE" & gb.Lf
+  strAbout &= "  - Fstart" & gb.Lf
+  strAbout &= "  - Fend" & gb.Lf
+  strAbout &= "  - duration" & gb.Lf
+  strAbout &= "  - interval" & gb.Lf & gb.Lf
+  
+  Message.Info(strAbout, "OK")
+
+End

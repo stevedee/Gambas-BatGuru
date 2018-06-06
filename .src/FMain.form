@@ -1,0 +1,73 @@
+# Gambas Form File 3.0
+
+{ Form Form
+  MoveScaled(0,0,66,59)
+  Icon = Picture["bat_blue.png"]
+  { mnuHelp Menu
+    Text = ("Help")
+    { mnuAbout Menu
+      Text = ("About") & "..."
+    }
+  }
+  { Label1 Label
+    MoveScaled(3.25,19,12.5,4)
+    Text = ("FmaxE (kHz)")
+  }
+  { Label2 Label
+    MoveScaled(3.25,24,12.5,4)
+    Text = ("F-start (kHz)")
+  }
+  { Label3 Label
+    MoveScaled(3.25,29,12.5,4)
+    Text = ("F-stop (kHz)")
+  }
+  { Label4 Label
+    MoveScaled(3.25,34,12.5,4)
+    Text = ("duration (ms)")
+  }
+  { Label5 Label
+    MoveScaled(3.25,39,12.5,4)
+    Text = ("interval (ms)")
+  }
+  { lstCallType ListBox
+    MoveScaled(17,2,15,15)
+    List = [("FM"), ("FM-qCF"), ("FM-CF-FM"), ("qCF"), ("qCF-FM")]
+  }
+  { vbFmaxE ValueBox
+    MoveScaled(17,19,10,4)
+  }
+  { vbFstart ValueBox
+    MoveScaled(17,24,10,4)
+  }
+  { vbFend ValueBox
+    MoveScaled(17,29,10,4)
+  }
+  { vbDuration ValueBox
+    MoveScaled(17,34,10,4)
+  }
+  { vbInterval ValueBox
+    MoveScaled(17,39,10,4)
+  }
+  { btnGuess Button
+    MoveScaled(3,45,29,4)
+    Text = ("take a guess >>>")
+  }
+  { taShortlist TextArea
+    MoveScaled(33,45,30,10)
+    NoTabFocus = True
+    ReadOnly = True
+  }
+  { Label6 Label
+    MoveScaled(3,2,13,4)
+    Text = ("Call type")
+  }
+  { pbCallType PictureBox
+    MoveScaled(5,7,10,9)
+    NoTabFocus = True
+  }
+  { taPossibles TextArea
+    MoveScaled(34,2,29,25)
+    Background = &HDFF7FF&
+    ReadOnly = True
+  }
+}

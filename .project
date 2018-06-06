@@ -1,0 +1,11 @@
+# Gambas Project File 3.0
+Title=BatGuru
+Startup=FMain
+Icon=bat_blue.png
+Version=0.0.7
+Component=gb.image
+Component=gb.gui
+Component=gb.form
+TabSize=2
+Language=en_US
+Packager=1
